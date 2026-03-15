@@ -163,6 +163,12 @@
 
   footer { text-align: center; padding: 2.5rem 3rem; border-top: 1px solid rgba(200,164,85,0.08); font-size: 0.75rem; color: var(--slate); letter-spacing: 1px; }
 
+  /* Fallback: show all content after 1.5s even if JS fails */
+  @keyframes revealFallback { to { opacity: 1; transform: translateY(0); } }
+  .timeline-item, .skill-group, .edu-card, .project-card, .cert-card { animation: revealFallback 0.6s ease-out forwards; animation-delay: 0.3s; }
+  .timeline-item:nth-child(2) { animation-delay: 0.4s; }
+  .timeline-item:nth-child(3) { animation-delay: 0.5s; }
+  .timeline-item:nth-child(4) { animation-delay: 0.6s; }
   @keyframes fadeUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
 
   @media (max-width: 900px) {
