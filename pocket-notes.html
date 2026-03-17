@@ -8,63 +8,49 @@
 <meta name="apple-mobile-web-app-title" content="Pocket Notes">
 <meta name="theme-color" content="#0a0a0c">
 <title>Pocket Notes</title>
-<link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiUG9ja2V0IE5vdGVzIiwic2hvcnRfbmFtZSI6IlBOb3RlcyIsInN0YXJ0X3VybCI6Ii4iLCJkaXNwbGF5Ijoic3RhbmRhbG9uZSIsImJhY2tncm91bmRfY29sb3IiOiIjMGEwYTBjIiwidGhlbWVfY29sb3IiOiIjMGEwYTBjIn0=">
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body, #root { height: 100%; overflow: hidden; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif; -webkit-font-smoothing: antialiased; background: #0a0a0c; }
-  input, textarea, button { font-family: inherit; }
-  ::-webkit-scrollbar { display: none; }
-  input[type=range] { -webkit-appearance: none; height: 6px; border-radius: 3px; outline: none; }
-  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: #5e8cff; cursor: pointer; }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body,#root{height:100%;overflow:hidden}
+  body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',system-ui,sans-serif;-webkit-font-smoothing:antialiased;background:#0a0a0c}
+  input,textarea,button{font-family:inherit}
+  ::-webkit-scrollbar{display:none}
+  input[type=range]{-webkit-appearance:none;height:6px;border-radius:3px;outline:none;background:#1e1e22}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:#5e8cff;cursor:pointer}
 </style>
 </head>
 <body>
 <div id="root"></div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
 <script type="text/babel">
-const { useState, useEffect, useRef, useCallback, useMemo } = React;
+const {useState,useEffect,useRef,useCallback,useMemo}=React;
 
-const uid = () => Math.random().toString(36).slice(2, 11);
-const clamp = (v, min, max) => Math.min(Math.max(v, min), max);
+const uid=()=>Math.random().toString(36).slice(2,11);
+const SK="pn_data",STK="pn_set",ASK="pn_state";
+const ld=(k,f)=>{try{const d=localStorage.getItem(k);return d?JSON.parse(d):f}catch{return f}};
+const sv=(k,d)=>{try{localStorage.setItem(k,JSON.stringify(d))}catch{}};
 
-const STORAGE_KEY = "pocket_notes_data";
-const SETTINGS_KEY = "pocket_notes_settings";
-const STATE_KEY = "pocket_notes_state";
-
-function loadJSON(key, fallback) {
-  try { const d = localStorage.getItem(key); return d ? JSON.parse(d) : fallback; }
-  catch { return fallback; }
-}
-function saveJSON(key, data) {
-  try { localStorage.setItem(key, JSON.stringify(data)); } catch {}
-}
-
-function autoSplitText(text) {
-  const lines = text.split("\n");
-  const sections = [];
-  let current = { label: "", lines: [] };
-  for (const line of lines) {
-    const headingMatch = line.match(/^#{1,3}\s+(.+)/);
-    if (headingMatch) {
-      if (current.lines.length > 0 || current.label) sections.push({ ...current, content: current.lines.join("\n").trim() });
-      current = { label: headingMatch[1].toLowerCase().trim(), lines: [] };
-    } else if (line.trim() === "" && current.lines.length > 0 && current.lines[current.lines.length - 1].trim() === "") {
-      sections.push({ ...current, content: current.lines.join("\n").trim() });
-      current = { label: "", lines: [] };
-    } else {
-      current.lines.push(line);
-    }
+function splitText(text){
+  const lines=text.split("\n"),secs=[];
+  let cur={label:"",lines:[]};
+  for(const line of lines){
+    const hm=line.match(/^#{1,3}\s+(.+)/);
+    if(hm){
+      if(cur.lines.length>0||cur.label)secs.push({...cur,content:cur.lines.join("\n").trim()});
+      cur={label:hm[1].trim(),lines:[]};
+    }else if(line.trim()===""&&cur.lines.length>0&&cur.lines[cur.lines.length-1].trim()===""){
+      secs.push({...cur,content:cur.lines.join("\n").trim()});
+      cur={label:"",lines:[]};
+    }else{cur.lines.push(line)}
   }
-  if (current.lines.length > 0 || current.label) sections.push({ ...current, content: current.lines.join("\n").trim() });
-  return sections.filter(s => s.content.length > 0).map((s, i) => ({
-    id: uid(), label: s.label || `section ${i + 1}`, content: s.content, bookmarked: false, done: false, highlighted: false,
+  if(cur.lines.length>0||cur.label)secs.push({...cur,content:cur.lines.join("\n").trim()});
+  return secs.filter(s=>s.content.length>0).map((s,i)=>({
+    id:uid(),label:s.label||("Section "+(i+1)),content:s.content,bookmarked:false,done:false,highlighted:false
   }));
 }
 
-const DEMO_TEXT = `# Intro
+const DEMO=`# Intro
 Welcome everyone. Thank you for joining today's session. I'm excited to share what we've been working on.
 
 # Agenda
@@ -82,497 +68,411 @@ I'd love to hear your questions. We have about 10 minutes for discussion. No que
 # Closing
 Thank you for your time today. I'll share the slides and recording by end of day. Reach out anytime if you have follow-up questions.`;
 
-const Icon = ({ name, size = 20, color = "currentColor" }) => {
-  const p = { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: color, strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" };
-  const icons = {
-    plus: <svg {...p}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
-    play: <svg {...p}><polygon points="5,3 19,12 5,21" fill={color} stroke="none"/></svg>,
-    pause: <svg {...p}><rect x="6" y="4" width="4" height="16" fill={color} stroke="none"/><rect x="14" y="4" width="4" height="16" fill={color} stroke="none"/></svg>,
-    chevLeft: <svg {...p}><polyline points="15,18 9,12 15,6"/></svg>,
-    chevRight: <svg {...p}><polyline points="9,18 15,12 9,6"/></svg>,
-    settings: <svg {...p}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>,
-    trash: <svg {...p}><polyline points="3,6 5,6 21,6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>,
-    bookmark: <svg {...p}><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>,
-    bookmarkFill: <svg {...p}><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z" fill={color}/></svg>,
-    eyeOff: <svg {...p}><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>,
-    check: <svg {...p}><polyline points="20,6 9,17 4,12"/></svg>,
-    copy: <svg {...p}><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>,
-    maximize: <svg {...p}><path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/></svg>,
-    minimize: <svg {...p}><path d="M4 14h6v6m10-10h-6V4m0 6l7-7M3 21l7-7"/></svg>,
-    arrowLeft: <svg {...p}><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12,19 5,12 12,5"/></svg>,
-    search: <svg {...p}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
-    star: <svg {...p}><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26" fill={color}/></svg>,
-    fast: <svg {...p}><polygon points="13,19 22,12 13,5" fill={color} stroke="none"/><polygon points="2,19 11,12 2,5" fill={color} stroke="none"/></svg>,
-    slow: <svg {...p}><polygon points="11,19 2,12 11,5" fill={color} stroke="none"/><polygon points="22,19 13,12 22,5" fill={color} stroke="none"/></svg>,
-    x: <svg {...p}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
-    file: <svg {...p}><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>,
-    zap: <svg {...p}><polygon points="13,2 3,14 12,14 11,22 21,10 12,10" fill={color} stroke="none"/></svg>,
-  };
-  return icons[name] || null;
-};
+const DSET={fontSize:18,lineSpacing:1.7,cardWidth:90,visibleLines:4,darkMode:true,scrollSpeed:30,mirrorText:false};
 
-const DEFAULT_SETTINGS = { fontSize: 17, lineSpacing: 1.65, cardWidth: 88, visibleLines: 4, darkMode: true, scrollSpeed: 30, mirrorText: false };
+function App(){
+  const [pres,setPres]=useState(()=>ld(SK,[]));
+  const [settings,setS]=useState(()=>ld(STK,DSET));
+  const [appState,setAS]=useState(()=>ld(ASK,{pid:null,view:"library",mode:"scroll",sec:0,chunk:0}));
+  const [focus,setFocus]=useState(false);
+  const [autoScr,setAutoScr]=useState(false);
+  const [rRun,setRRun]=useState(false);
+  const [rTime,setRTime]=useState(0);
+  const [qHide,setQHide]=useState(false);
+  const [impTxt,setImpTxt]=useState("");
+  const [showImp,setShowImp]=useState(false);
+  const [cardPos,setCardPos]=useState({x:0,y:0});
+  const [dragging,setDragging]=useState(false);
+  const [toast,setToast]=useState("");
+  const [cDel,setCDel]=useState(null);
+  const [swOff,setSwOff]=useState(0);
+  const [editSec,setEditSec]=useState(null);
+  const [sq,setSq]=useState("");
 
-function PocketNotes() {
-  const [presentations, setPresentations] = useState(() => loadJSON(STORAGE_KEY, []));
-  const [settings, setSettings] = useState(() => loadJSON(SETTINGS_KEY, DEFAULT_SETTINGS));
-  const [appState, setAppState] = useState(() => loadJSON(STATE_KEY, { currentPresId: null, view: "library", readMode: "scroll", currentSection: 0, currentChunk: 0 }));
-  const [focusMode, setFocusMode] = useState(false);
-  const [autoScroll, setAutoScroll] = useState(false);
-  const [rehearsalRunning, setRehearsalRunning] = useState(false);
-  const [rehearsalTime, setRehearsalTime] = useState(0);
-  const [sectionTimes, setSectionTimes] = useState({});
-  const [searchQuery, setSearchQuery] = useState("");
-  const [editingSection, setEditingSection] = useState(null);
-  const [quickHide, setQuickHide] = useState(false);
-  const [importText, setImportText] = useState("");
-  const [showImport, setShowImport] = useState(false);
-  const [cardPos, setCardPos] = useState({ x: 0, y: 0 });
-  const [dragging, setDragging] = useState(false);
-  const [showToast, setShowToast] = useState("");
-  const [confirmDelete, setConfirmDelete] = useState(null);
-  const [swipeOffset, setSwipeOffset] = useState(0);
+  const scrollRef=useRef(null);
+  const asrRef=useRef(null);
+  const rrRef=useRef(null);
+  const dragRef=useRef(null);
+  const txRef=useRef(0);
+  const tdRef=useRef(0);
 
-  const scrollRef = useRef(null);
-  const autoScrollRef = useRef(null);
-  const rehearsalRef = useRef(null);
-  const dragStartRef = useRef(null);
-  const touchStartX = useRef(0);
-  const touchDelta = useRef(0);
+  const cp=pres.find(p=>p.id===appState.pid);
+  const secs=cp?cp.sections:[];
+  const view=appState.view;
+  const dk=settings.darkMode;
 
-  const currentPres = presentations.find(p => p.id === appState.currentPresId);
-  const sections = currentPres?.sections || [];
-  const { view } = appState;
-  const dark = settings.darkMode;
+  const chunks=useMemo(()=>{
+    const r=[];
+    secs.forEach((sec,si)=>{
+      const sn=sec.content.match(/[^.!?]+[.!?]+/g)||[sec.content];
+      for(let i=0;i<sn.length;i+=2)r.push({text:sn.slice(i,i+2).join(" ").trim(),si,label:sec.label});
+    });
+    return r;
+  },[secs]);
 
-  useEffect(() => { saveJSON(STORAGE_KEY, presentations); }, [presentations]);
-  useEffect(() => { saveJSON(SETTINGS_KEY, settings); }, [settings]);
-  useEffect(() => { saveJSON(STATE_KEY, appState); }, [appState]);
+  const T=useMemo(()=>({
+    bg:dk?"#0a0a0c":"#f4f4f6",sf:dk?"#161619":"#fff",sa:dk?"#1e1e22":"#ededf0",
+    cd:dk?"#1c1c21":"#fff",cb:dk?"rgba(255,255,255,0.07)":"rgba(0,0,0,0.08)",
+    tx:dk?"#e8e8ec":"#1a1a1e",ts:dk?"#8e8e96":"#6e6e78",tm:dk?"#55555e":"#a0a0aa",
+    ac:"#5e8cff",as:dk?"rgba(94,140,255,0.12)":"rgba(94,140,255,0.08)",
+    dg:"#ff5e6e",ds:dk?"rgba(255,94,110,0.12)":"rgba(255,94,110,0.08)",
+    sc:"#4ecb71",ss:dk?"rgba(78,203,113,0.12)":"rgba(78,203,113,0.08)",
+    bd:dk?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.06)",
+    sh:dk?"0 8px 40px rgba(0,0,0,0.7)":"0 8px 40px rgba(0,0,0,0.12)",
+  }),[dk]);
 
-  const toast = (msg) => { setShowToast(msg); setTimeout(() => setShowToast(""), 2000); };
-  const go = (view, extra = {}) => setAppState(s => ({ ...s, view, ...extra }));
+  useEffect(()=>{sv(SK,pres)},[pres]);
+  useEffect(()=>{sv(STK,settings)},[settings]);
+  useEffect(()=>{sv(ASK,appState)},[appState]);
 
-  const createPresentation = (title, text) => {
-    let secs = autoSplitText(text);
-    if (secs.length === 0) secs = [{ id: uid(), label: "section 1", content: text || "New section", bookmarked: false, done: false, highlighted: false }];
-    const pres = { id: uid(), title: title || "Untitled", sections: secs, createdAt: Date.now(), updatedAt: Date.now() };
-    setPresentations(p => [pres, ...p]);
-    setAppState(s => ({ ...s, currentPresId: pres.id, view: "editor" }));
-    toast("Created!");
-  };
-
-  const updatePresentation = (id, updates) => {
-    setPresentations(ps => ps.map(p => p.id === id ? { ...p, ...updates, updatedAt: Date.now() } : p));
-  };
-
-  const deletePresentation = (id) => {
-    setPresentations(ps => ps.filter(p => p.id !== id));
-    if (appState.currentPresId === id) setAppState(s => ({ ...s, currentPresId: null, view: "library" }));
-    setConfirmDelete(null);
-    toast("Deleted");
-  };
-
-  const updateSection = (secId, updates) => {
-    if (!currentPres) return;
-    updatePresentation(currentPres.id, { sections: currentPres.sections.map(s => s.id === secId ? { ...s, ...updates } : s) });
-  };
-
-  const addSection = () => {
-    if (!currentPres) return;
-    const sec = { id: uid(), label: `section ${sections.length + 1}`, content: "", bookmarked: false, done: false, highlighted: false };
-    updatePresentation(currentPres.id, { sections: [...sections, sec] });
-    setEditingSection(sec.id);
-  };
-
-  const deleteSection = (secId) => {
-    if (!currentPres) return;
-    updatePresentation(currentPres.id, { sections: sections.filter(s => s.id !== secId) });
-  };
-
-  const moveSection = (index, dir) => {
-    if (!currentPres) return;
-    const newIdx = index + dir;
-    if (newIdx < 0 || newIdx >= sections.length) return;
-    const newSecs = [...sections];
-    [newSecs[index], newSecs[newIdx]] = [newSecs[newIdx], newSecs[index]];
-    updatePresentation(currentPres.id, { sections: newSecs });
-  };
-
-  const handleImport = () => {
-    if (!importText.trim()) return;
-    createPresentation("Imported Notes", importText.trim());
-    setImportText(""); setShowImport(false);
-  };
-
-  const handleClipboardImport = async () => {
-    try {
-      const text = await navigator.clipboard.readText();
-      if (text) { createPresentation("From Clipboard", text); toast("Imported!"); }
-    } catch { toast("Clipboard access denied"); }
-  };
-
-  useEffect(() => {
-    if (autoScroll && scrollRef.current) {
-      let last = performance.now();
-      const tick = (t) => {
-        const dt = (t - last) / 1000; last = t;
-        if (scrollRef.current) scrollRef.current.scrollTop += settings.scrollSpeed * dt;
-        autoScrollRef.current = requestAnimationFrame(tick);
-      };
-      autoScrollRef.current = requestAnimationFrame(tick);
-      return () => cancelAnimationFrame(autoScrollRef.current);
+  useEffect(()=>{
+    if(autoScr&&scrollRef.current){
+      let last=performance.now();
+      const tick=(t)=>{const dt=(t-last)/1000;last=t;if(scrollRef.current)scrollRef.current.scrollTop+=settings.scrollSpeed*dt;asrRef.current=requestAnimationFrame(tick)};
+      asrRef.current=requestAnimationFrame(tick);
+      return()=>cancelAnimationFrame(asrRef.current);
     }
-  }, [autoScroll, settings.scrollSpeed]);
+  },[autoScr,settings.scrollSpeed]);
 
-  useEffect(() => {
-    if (rehearsalRunning) {
-      rehearsalRef.current = setInterval(() => setRehearsalTime(t => t + 1), 1000);
-      return () => clearInterval(rehearsalRef.current);
-    } else { clearInterval(rehearsalRef.current); }
-  }, [rehearsalRunning]);
+  useEffect(()=>{
+    if(rRun){rrRef.current=setInterval(()=>setRTime(t=>t+1),1000);return()=>clearInterval(rrRef.current)}
+    else{clearInterval(rrRef.current)}
+  },[rRun]);
 
-  const onDragStart = (e) => {
-    const touch = e.touches?.[0] || e;
-    dragStartRef.current = { x: touch.clientX - cardPos.x, y: touch.clientY - cardPos.y };
-    setDragging(true);
-  };
-  const onDragMove = useCallback((e) => {
-    if (!dragging || !dragStartRef.current) return;
-    const touch = e.touches?.[0] || e;
-    setCardPos({ x: touch.clientX - dragStartRef.current.x, y: touch.clientY - dragStartRef.current.y });
-  }, [dragging]);
-  const onDragEnd = () => { setDragging(false); dragStartRef.current = null; };
+  const onDS=e=>{const t=e.touches?.[0]||e;dragRef.current={x:t.clientX-cardPos.x,y:t.clientY-cardPos.y};setDragging(true)};
+  const onDM=useCallback(e=>{if(!dragging||!dragRef.current)return;const t=e.touches?.[0]||e;setCardPos({x:t.clientX-dragRef.current.x,y:t.clientY-dragRef.current.y})},[dragging]);
+  const onDE=()=>{setDragging(false);dragRef.current=null};
 
-  useEffect(() => {
-    if (dragging) {
-      window.addEventListener("touchmove", onDragMove, { passive: false });
-      window.addEventListener("touchend", onDragEnd);
-      window.addEventListener("mousemove", onDragMove);
-      window.addEventListener("mouseup", onDragEnd);
-      return () => { window.removeEventListener("touchmove", onDragMove); window.removeEventListener("touchend", onDragEnd); window.removeEventListener("mousemove", onDragMove); window.removeEventListener("mouseup", onDragEnd); };
+  useEffect(()=>{
+    if(dragging){
+      const o={passive:false};
+      window.addEventListener("touchmove",onDM,o);window.addEventListener("touchend",onDE);
+      window.addEventListener("mousemove",onDM);window.addEventListener("mouseup",onDE);
+      return()=>{window.removeEventListener("touchmove",onDM);window.removeEventListener("touchend",onDE);window.removeEventListener("mousemove",onDM);window.removeEventListener("mouseup",onDE)};
     }
-  }, [dragging, onDragMove]);
+  },[dragging,onDM]);
 
-  const fmtTime = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  const tst=m=>{setToast(m);setTimeout(()=>setToast(""),2000)};
+  const go=(v,ex={})=>setAS(s=>({...s,view:v,...ex}));
+  const fmt=s=>`${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`;
 
-  const T = useMemo(() => ({
-    bg: dark ? "#0a0a0c" : "#f5f5f7",
-    surface: dark ? "#161619" : "#ffffff",
-    surfaceAlt: dark ? "#1e1e22" : "#f0f0f2",
-    card: dark ? "#1a1a1f" : "#ffffff",
-    cardBorder: dark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.08)",
-    text: dark ? "#e8e8ec" : "#1a1a1e",
-    textSecondary: dark ? "#8e8e96" : "#6e6e78",
-    textMuted: dark ? "#55555e" : "#a0a0aa",
-    accent: "#5e8cff",
-    accentSoft: dark ? "rgba(94,140,255,0.12)" : "rgba(94,140,255,0.08)",
-    danger: "#ff5e6e",
-    dangerSoft: dark ? "rgba(255,94,110,0.12)" : "rgba(255,94,110,0.08)",
-    success: "#4ecb71",
-    successSoft: dark ? "rgba(78,203,113,0.12)" : "rgba(78,203,113,0.08)",
-    border: dark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)",
-    shadow: dark ? "0 2px 20px rgba(0,0,0,0.5)" : "0 2px 20px rgba(0,0,0,0.08)",
-    shadowLg: dark ? "0 8px 40px rgba(0,0,0,0.7)" : "0 8px 40px rgba(0,0,0,0.12)",
-  }), [dark]);
+  const createP=(title,text)=>{
+    let ss=splitText(text);
+    if(!ss.length)ss=[{id:uid(),label:"Section 1",content:text||"New section",bookmarked:false,done:false,highlighted:false}];
+    const p={id:uid(),title:title||"Untitled",sections:ss,created:Date.now(),updated:Date.now()};
+    setPres(ps=>[p,...ps]);
+    setAS(s=>({...s,pid:p.id,view:"editor"}));
+    tst("Created!");
+  };
+  const updP=(id,u)=>setPres(ps=>ps.map(p=>p.id===id?{...p,...u,updated:Date.now()}:p));
+  const delP=id=>{setPres(ps=>ps.filter(p=>p.id!==id));if(appState.pid===id)setAS(s=>({...s,pid:null,view:"library"}));setCDel(null);tst("Deleted")};
+  const updSec=(sid,u)=>{if(!cp)return;updP(cp.id,{sections:cp.sections.map(s=>s.id===sid?{...s,...u}:s)})};
+  const addSec=()=>{if(!cp)return;const s={id:uid(),label:"Section "+(secs.length+1),content:"",bookmarked:false,done:false,highlighted:false};updP(cp.id,{sections:[...secs,s]});setEditSec(s.id)};
+  const delSec=sid=>{if(!cp)return;updP(cp.id,{sections:secs.filter(s=>s.id!==sid)})};
+  const movSec=(i,d)=>{if(!cp)return;const ni=i+d;if(ni<0||ni>=secs.length)return;const ns=[...secs];[ns[i],ns[ni]]=[ns[ni],ns[i]];updP(cp.id,{sections:ns})};
+  const doImp=()=>{if(!impTxt.trim())return;createP("Imported Notes",impTxt.trim());setImpTxt("");setShowImp(false)};
+  const clipImp=async()=>{try{const t=await navigator.clipboard.readText();if(t){createP("From Clipboard",t);tst("Imported!")}}catch{tst("Clipboard denied")}};
 
-  if (quickHide) {
-    return <div style={{ position: "fixed", inset: 0, background: "#000", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 }} onClick={() => setQuickHide(false)}>
-      <p style={{ color: "#333", fontSize: 12 }}>Tap to return</p>
-    </div>;
-  }
+  const bs={fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Text',system-ui,sans-serif",background:T.bg,color:T.tx,height:"100vh",width:"100%",maxWidth:480,margin:"0 auto",position:"relative",overflow:"hidden"};
+  const bt=(v="")=>({display:"inline-flex",alignItems:"center",justifyContent:"center",gap:6,padding:v==="i"?10:"10px 18px",borderRadius:v==="i"?12:14,border:"none",cursor:"pointer",fontSize:14,fontWeight:500,fontFamily:"inherit",transition:"all 0.15s",background:v==="p"?T.ac:v==="d"?T.ds:T.sa,color:v==="p"?"#fff":v==="d"?T.dg:T.tx,minWidth:v==="i"?44:undefined,minHeight:44});
+  const ip={width:"100%",padding:"12px 14px",borderRadius:12,border:"1px solid "+T.bd,background:T.sa,color:T.tx,fontSize:15,fontFamily:"inherit",outline:"none",boxSizing:"border-box"};
 
-  const baseStyle = { fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif", background: T.bg, color: T.text, minHeight: "100vh", maxWidth: 480, margin: "0 auto", position: "relative", overflow: "hidden", WebkitFontSmoothing: "antialiased" };
-  const btnStyle = (v = "default") => ({ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, padding: v === "icon" ? 10 : "10px 18px", borderRadius: v === "icon" ? 12 : 14, border: "none", cursor: "pointer", fontSize: 14, fontWeight: 500, fontFamily: "inherit", transition: "all 0.15s ease", background: v === "primary" ? T.accent : v === "danger" ? T.dangerSoft : T.surfaceAlt, color: v === "primary" ? "#fff" : v === "danger" ? T.danger : T.text, minWidth: v === "icon" ? 44 : undefined, minHeight: 44 });
-  const inputStyle = { width: "100%", padding: "12px 14px", borderRadius: 12, border: `1px solid ${T.border}`, background: T.surfaceAlt, color: T.text, fontSize: 15, fontFamily: "inherit", outline: "none", boxSizing: "border-box" };
+  const I=({n,s:sz=20,c:cl="currentColor"})=>{
+    const a={width:sz,height:sz,viewBox:"0 0 24 24",fill:"none",stroke:cl,strokeWidth:2,strokeLinecap:"round",strokeLinejoin:"round"};
+    switch(n){
+      case"plus":return<svg {...a}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>;
+      case"play":return<svg {...a}><polygon points="5,3 19,12 5,21" fill={cl} stroke="none"/></svg>;
+      case"pause":return<svg {...a}><rect x="6" y="4" width="4" height="16" fill={cl} stroke="none"/><rect x="14" y="4" width="4" height="16" fill={cl} stroke="none"/></svg>;
+      case"cl":return<svg {...a}><polyline points="15,18 9,12 15,6"/></svg>;
+      case"cr":return<svg {...a}><polyline points="9,18 15,12 9,6"/></svg>;
+      case"gear":return<svg {...a}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>;
+      case"trash":return<svg {...a}><polyline points="3,6 5,6 21,6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>;
+      case"bm":return<svg {...a}><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>;
+      case"bmf":return<svg {...a}><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z" fill={cl}/></svg>;
+      case"eoff":return<svg {...a}><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>;
+      case"chk":return<svg {...a}><polyline points="20,6 9,17 4,12"/></svg>;
+      case"cpy":return<svg {...a}><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>;
+      case"max":return<svg {...a}><path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/></svg>;
+      case"min":return<svg {...a}><path d="M4 14h6v6m10-10h-6V4m0 6l7-7M3 21l7-7"/></svg>;
+      case"back":return<svg {...a}><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12,19 5,12 12,5"/></svg>;
+      case"srch":return<svg {...a}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>;
+      case"star":return<svg {...a}><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26" fill={cl}/></svg>;
+      case"ff":return<svg {...a}><polygon points="13,19 22,12 13,5" fill={cl} stroke="none"/><polygon points="2,19 11,12 2,5" fill={cl} stroke="none"/></svg>;
+      case"rw":return<svg {...a}><polygon points="11,19 2,12 11,5" fill={cl} stroke="none"/><polygon points="22,19 13,12 22,5" fill={cl} stroke="none"/></svg>;
+      case"x":return<svg {...a}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
+      case"file":return<svg {...a}><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>;
+      case"zap":return<svg {...a}><polygon points="13,2 3,14 12,14 11,22 21,10 12,10" fill={cl} stroke="none"/></svg>;
+      default:return null;
+    }
+  };
 
-  // ── LIBRARY ──
-  if (view === "library") {
-    return <div style={baseStyle}>
-      <div style={{ padding: "60px 20px 20px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-          <h1 style={{ fontSize: 28, fontWeight: 700, letterSpacing: -0.5, margin: 0 }}>Pocket Notes</h1>
-          <button style={btnStyle("icon")} onClick={() => go("settings")}><Icon name="settings" size={20} color={T.textSecondary} /></button>
-        </div>
-        <p style={{ color: T.textSecondary, fontSize: 14, margin: "0 0 28px" }}>Your presentation notes</p>
-        <div style={{ display: "flex", gap: 10, marginBottom: 24, flexWrap: "wrap" }}>
-          <button style={btnStyle("primary")} onClick={() => { setShowImport(true); setImportText(""); }}><Icon name="plus" size={16} color="#fff" /> New</button>
-          <button style={btnStyle()} onClick={handleClipboardImport}><Icon name="copy" size={16} color={T.textSecondary} /> Paste</button>
-          {presentations.length === 0 && <button style={{ ...btnStyle(), background: T.accentSoft, color: T.accent }} onClick={() => createPresentation("Demo Presentation", DEMO_TEXT)}><Icon name="zap" size={16} color={T.accent} /> Demo</button>}
-        </div>
-        {showImport && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 100, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={e => { if (e.target === e.currentTarget) setShowImport(false); }}>
-          <div style={{ background: T.surface, borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 480, maxHeight: "80vh", overflow: "auto" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>New Presentation</h3>
-              <button style={btnStyle("icon")} onClick={() => setShowImport(false)}><Icon name="x" size={18} color={T.textSecondary} /></button>
-            </div>
-            <p style={{ color: T.textSecondary, fontSize: 13, margin: "0 0 16px" }}>Paste notes. Use # headings or blank lines to split sections.</p>
-            <textarea style={{ ...inputStyle, height: 200, resize: "none", lineHeight: 1.5 }} placeholder="Paste your script or notes here..." value={importText} onChange={e => setImportText(e.target.value)} autoFocus />
-            <button style={{ ...btnStyle("primary"), width: "100%", marginTop: 14, padding: "14px 18px" }} onClick={handleImport} disabled={!importText.trim()}>Import & Create</button>
+  if(qHide)return<div style={{position:"fixed",inset:0,background:"#000",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999}} onClick={()=>setQHide(false)}><p style={{color:"#222",fontSize:11}}>Tap to return</p></div>;
+
+  // ═══ LIBRARY ═══
+  if(view==="library"){
+    return<div style={bs}><div style={{padding:"54px 20px 20px",height:"100%",overflow:"auto",WebkitOverflowScrolling:"touch"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+        <h1 style={{fontSize:26,fontWeight:700,letterSpacing:-0.5}}>Pocket Notes</h1>
+        <button style={bt("i")} onClick={()=>go("settings")}><I n="gear" s={20} c={T.ts}/></button>
+      </div>
+      <p style={{color:T.ts,fontSize:13,margin:"0 0 24px"}}>Your presentation notes</p>
+      <div style={{display:"flex",gap:8,marginBottom:22,flexWrap:"wrap"}}>
+        <button style={bt("p")} onClick={()=>{setShowImp(true);setImpTxt("")}}><I n="plus" s={16} c="#fff"/> New</button>
+        <button style={bt()} onClick={clipImp}><I n="cpy" s={16} c={T.ts}/> Paste</button>
+        {!pres.length&&<button style={{...bt(),background:T.as,color:T.ac}} onClick={()=>createP("Demo Presentation",DEMO)}><I n="zap" s={16} c={T.ac}/> Try Demo</button>}
+      </div>
+      {showImp&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:100,display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={e=>{if(e.target===e.currentTarget)setShowImp(false)}}>
+        <div style={{background:T.sf,borderRadius:"20px 20px 0 0",padding:24,width:"100%",maxWidth:480,maxHeight:"80vh",overflow:"auto"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+            <h3 style={{margin:0,fontSize:18,fontWeight:600}}>New Presentation</h3>
+            <button style={bt("i")} onClick={()=>setShowImp(false)}><I n="x" s={18} c={T.ts}/></button>
           </div>
-        </div>}
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {presentations.map(p => <div key={p.id} style={{ background: T.surface, borderRadius: 16, padding: 16, border: `1px solid ${T.border}` }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-              <div style={{ flex: 1, cursor: "pointer" }} onClick={() => go("editor", { currentPresId: p.id })}>
-                <h3 style={{ margin: "0 0 4px", fontSize: 16, fontWeight: 600 }}>{p.title}</h3>
-                <p style={{ margin: 0, color: T.textSecondary, fontSize: 13 }}>{p.sections.length} section{p.sections.length !== 1 ? "s" : ""} · {new Date(p.updatedAt).toLocaleDateString()}</p>
-              </div>
-              <div style={{ display: "flex", gap: 4 }}>
-                <button style={btnStyle("icon")} onClick={() => { setAppState(s => ({ ...s, currentPresId: p.id, currentSection: 0, currentChunk: 0 })); go("reader", { currentPresId: p.id }); }}><Icon name="play" size={16} color={T.accent} /></button>
-                <button style={btnStyle("icon")} onClick={() => setConfirmDelete(p.id)}><Icon name="trash" size={16} color={T.textMuted} /></button>
-              </div>
+          <p style={{color:T.ts,fontSize:13,margin:"0 0 14px"}}>Paste notes below. Use <b># Headings</b> to auto-split into sections.</p>
+          <textarea style={{...ip,height:180,resize:"none",lineHeight:1.5}} placeholder="Paste your script or notes here..." value={impTxt} onChange={e=>setImpTxt(e.target.value)} autoFocus/>
+          <button style={{...bt("p"),width:"100%",marginTop:14,padding:"14px 18px"}} onClick={doImp} disabled={!impTxt.trim()}>Import & Create</button>
+        </div>
+      </div>}
+      <div style={{display:"flex",flexDirection:"column",gap:10}}>
+        {pres.map(p=><div key={p.id} style={{background:T.sf,borderRadius:16,padding:16,border:"1px solid "+T.bd}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+            <div style={{flex:1,cursor:"pointer"}} onClick={()=>go("editor",{pid:p.id})}>
+              <h3 style={{margin:"0 0 4px",fontSize:16,fontWeight:600}}>{p.title}</h3>
+              <p style={{margin:0,color:T.ts,fontSize:12}}>{p.sections.length} sections · {new Date(p.updated).toLocaleDateString()}</p>
             </div>
-            {confirmDelete === p.id && <div style={{ marginTop: 12, padding: 12, background: T.dangerSoft, borderRadius: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: 13, color: T.danger }}>Delete?</span>
-              <div style={{ display: "flex", gap: 8 }}>
-                <button style={{ ...btnStyle(), padding: "6px 14px", fontSize: 13 }} onClick={() => setConfirmDelete(null)}>Cancel</button>
-                <button style={{ ...btnStyle("danger"), padding: "6px 14px", fontSize: 13 }} onClick={() => deletePresentation(p.id)}>Delete</button>
-              </div>
-            </div>}
-          </div>)}
-        </div>
-        {presentations.length === 0 && <div style={{ textAlign: "center", padding: "60px 20px", color: T.textMuted }}><Icon name="file" size={40} color={T.textMuted} /><p style={{ marginTop: 12, fontSize: 14 }}>No presentations yet</p></div>}
-      </div>
-      {showToast && <div style={{ position: "fixed", bottom: 40, left: "50%", transform: "translateX(-50%)", background: T.surface, color: T.text, padding: "10px 20px", borderRadius: 20, fontSize: 14, boxShadow: T.shadowLg, border: `1px solid ${T.border}`, zIndex: 200 }}>{showToast}</div>}
-    </div>;
-  }
-
-  // ── EDITOR ──
-  if (view === "editor" && currentPres) {
-    return <div style={baseStyle}>
-      <div style={{ padding: "20px 20px 100px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20, paddingTop: 8 }}>
-          <button style={btnStyle("icon")} onClick={() => { setEditingSection(null); go("library"); }}><Icon name="arrowLeft" size={20} color={T.textSecondary} /></button>
-          <input style={{ ...inputStyle, fontWeight: 600, fontSize: 18, border: "none", background: "transparent", padding: "8px 4px" }} value={currentPres.title} onChange={e => updatePresentation(currentPres.id, { title: e.target.value })} placeholder="Title" />
-        </div>
-        <div style={{ position: "relative", marginBottom: 16 }}>
-          <input style={{ ...inputStyle, paddingLeft: 36 }} placeholder="Search sections..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
-          <div style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}><Icon name="search" size={16} color={T.textMuted} /></div>
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {sections.filter(s => !searchQuery || s.label.includes(searchQuery.toLowerCase()) || s.content.toLowerCase().includes(searchQuery.toLowerCase())).map((sec, idx) => <div key={sec.id} style={{ background: T.surface, borderRadius: 14, border: `1px solid ${sec.highlighted ? T.accent : T.border}`, overflow: "hidden" }}>
-            <div style={{ display: "flex", alignItems: "center", padding: "10px 12px", gap: 8 }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                <button style={{ ...btnStyle("icon"), padding: 4, minWidth: 28, minHeight: 28 }} onClick={() => moveSection(idx, -1)}><span style={{ fontSize: 10, color: T.textMuted }}>▲</span></button>
-                <button style={{ ...btnStyle("icon"), padding: 4, minWidth: 28, minHeight: 28 }} onClick={() => moveSection(idx, 1)}><span style={{ fontSize: 10, color: T.textMuted }}>▼</span></button>
-              </div>
-              <div style={{ flex: 1, cursor: "pointer" }} onClick={() => setEditingSection(editingSection === sec.id ? null : sec.id)}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, color: T.accent, background: T.accentSoft, padding: "2px 8px", borderRadius: 6 }}>{sec.label}</span>
-                  {sec.done && <Icon name="check" size={14} color={T.success} />}
-                </div>
-                <p style={{ margin: "4px 0 0", fontSize: 13, color: T.textSecondary, lineHeight: 1.4, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{sec.content}</p>
-              </div>
-              <div style={{ display: "flex", gap: 2 }}>
-                <button style={{ ...btnStyle("icon"), padding: 6, minWidth: 36, minHeight: 36 }} onClick={() => updateSection(sec.id, { bookmarked: !sec.bookmarked })}><Icon name={sec.bookmarked ? "bookmarkFill" : "bookmark"} size={16} color={sec.bookmarked ? T.accent : T.textMuted} /></button>
-                <button style={{ ...btnStyle("icon"), padding: 6, minWidth: 36, minHeight: 36 }} onClick={() => updateSection(sec.id, { highlighted: !sec.highlighted })}><Icon name="star" size={16} color={sec.highlighted ? "#fbbf24" : T.textMuted} /></button>
-                <button style={{ ...btnStyle("icon"), padding: 6, minWidth: 36, minHeight: 36 }} onClick={() => deleteSection(sec.id)}><Icon name="trash" size={14} color={T.textMuted} /></button>
-              </div>
+            <div style={{display:"flex",gap:4}}>
+              <button style={bt("i")} onClick={()=>{setAS(s=>({...s,pid:p.id,sec:0,chunk:0,view:"reader",mode:"scroll"}));setAutoScr(false);setRRun(false);setRTime(0)}}><I n="play" s={16} c={T.ac}/></button>
+              <button style={bt("i")} onClick={()=>setCDel(p.id)}><I n="trash" s={16} c={T.tm}/></button>
             </div>
-            {editingSection === sec.id && <div style={{ padding: "0 12px 12px" }}>
-              <input style={{ ...inputStyle, fontSize: 13, marginBottom: 8 }} value={sec.label} onChange={e => updateSection(sec.id, { label: e.target.value })} placeholder="Label" />
-              <textarea style={{ ...inputStyle, fontSize: 14, minHeight: 120, resize: "vertical", lineHeight: 1.6 }} value={sec.content} onChange={e => updateSection(sec.id, { content: e.target.value })} placeholder="Content..." />
-            </div>}
-          </div>)}
-        </div>
-        <button style={{ ...btnStyle(), width: "100%", marginTop: 12, borderStyle: "dashed", border: `1.5px dashed ${T.border}`, background: "transparent" }} onClick={addSection}><Icon name="plus" size={16} color={T.textMuted} /> Add Section</button>
+          </div>
+          {cDel===p.id&&<div style={{marginTop:12,padding:12,background:T.ds,borderRadius:10,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <span style={{fontSize:13,color:T.dg}}>Delete this?</span>
+            <div style={{display:"flex",gap:8}}>
+              <button style={{...bt(),padding:"6px 14px",fontSize:13}} onClick={()=>setCDel(null)}>Cancel</button>
+              <button style={{...bt("d"),padding:"6px 14px",fontSize:13}} onClick={()=>delP(p.id)}>Delete</button>
+            </div>
+          </div>}
+        </div>)}
       </div>
-      <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, padding: "12px 20px", background: T.surface, borderTop: `1px solid ${T.border}`, display: "flex", gap: 10, boxSizing: "border-box", zIndex: 50 }}>
-        <button style={{ ...btnStyle("primary"), flex: 1, padding: "14px 18px" }} onClick={() => { setAppState(s => ({ ...s, currentSection: 0, currentChunk: 0 })); go("reader"); }}><Icon name="play" size={16} color="#fff" /> Present</button>
-      </div>
-      {showToast && <div style={{ position: "fixed", bottom: 80, left: "50%", transform: "translateX(-50%)", background: T.surface, color: T.text, padding: "10px 20px", borderRadius: 20, fontSize: 14, boxShadow: T.shadowLg, border: `1px solid ${T.border}`, zIndex: 200 }}>{showToast}</div>}
+      {!pres.length&&<div style={{textAlign:"center",padding:"50px 20px",color:T.tm}}>
+        <I n="file" s={36} c={T.tm}/>
+        <p style={{marginTop:12,fontSize:14}}>No presentations yet</p>
+        <p style={{fontSize:12,color:T.tm,marginTop:4}}>Tap "New" or "Try Demo" to start</p>
+      </div>}
+    </div>
+    {toast&&<div style={{position:"fixed",bottom:30,left:"50%",transform:"translateX(-50%)",background:T.sf,color:T.tx,padding:"8px 18px",borderRadius:20,fontSize:13,boxShadow:T.sh,border:"1px solid "+T.bd,zIndex:200}}>{toast}</div>}
     </div>;
   }
 
-  // ── SETTINGS ──
-  if (view === "settings") {
-    const Slider = ({ label, value, min, max, step, unit, onChange }) => <div style={{ marginBottom: 20 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-        <span style={{ fontSize: 14, fontWeight: 500 }}>{label}</span>
-        <span style={{ fontSize: 14, color: T.accent, fontWeight: 600 }}>{value}{unit}</span>
+  // ═══ EDITOR ═══
+  if(view==="editor"&&cp){
+    return<div style={bs}><div style={{padding:"16px 20px 100px",height:"100%",overflow:"auto",WebkitOverflowScrolling:"touch"}}>
+      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16,paddingTop:4}}>
+        <button style={bt("i")} onClick={()=>{setEditSec(null);go("library")}}><I n="back" s={20} c={T.ts}/></button>
+        <input style={{...ip,fontWeight:600,fontSize:17,border:"none",background:"transparent",padding:"6px 4px"}} value={cp.title} onChange={e=>updP(cp.id,{title:e.target.value})} placeholder="Title"/>
       </div>
-      <input type="range" min={min} max={max} step={step} value={value} onChange={e => onChange(parseFloat(e.target.value))} style={{ width: "100%", accentColor: T.accent }} />
-    </div>;
-
-    const Toggle = ({ label, value, onChange, desc }) => <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 0", borderBottom: `1px solid ${T.border}`, cursor: "pointer" }} onClick={() => onChange(!value)}>
-      <div><span style={{ fontSize: 14, fontWeight: 500 }}>{label}</span>{desc && <p style={{ margin: "2px 0 0", fontSize: 12, color: T.textSecondary }}>{desc}</p>}</div>
-      <div style={{ width: 48, height: 28, borderRadius: 14, background: value ? T.accent : T.surfaceAlt, padding: 2, transition: "all 0.2s" }}><div style={{ width: 24, height: 24, borderRadius: 12, background: "#fff", transform: value ? "translateX(20px)" : "translateX(0)", transition: "all 0.2s", boxShadow: "0 1px 3px rgba(0,0,0,0.2)" }} /></div>
-    </div>;
-
-    return <div style={baseStyle}>
-      <div style={{ padding: "20px 20px 40px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 28, paddingTop: 8 }}>
-          <button style={btnStyle("icon")} onClick={() => go("library")}><Icon name="arrowLeft" size={20} color={T.textSecondary} /></button>
-          <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>Settings</h2>
-        </div>
-        <h3 style={{ fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, color: T.textMuted, margin: "0 0 16px" }}>Typography</h3>
-        <Slider label="Font Size" value={settings.fontSize} min={12} max={28} step={1} unit="px" onChange={v => setSettings(s => ({ ...s, fontSize: v }))} />
-        <Slider label="Line Spacing" value={settings.lineSpacing} min={1.2} max={2.2} step={0.05} unit="×" onChange={v => setSettings(s => ({ ...s, lineSpacing: v }))} />
-        <Slider label="Visible Lines" value={settings.visibleLines} min={2} max={6} step={1} unit="" onChange={v => setSettings(s => ({ ...s, visibleLines: v }))} />
-        <h3 style={{ fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, color: T.textMuted, margin: "28px 0 16px" }}>Card</h3>
-        <Slider label="Card Width" value={settings.cardWidth} min={60} max={100} step={2} unit="%" onChange={v => setSettings(s => ({ ...s, cardWidth: v }))} />
-        <h3 style={{ fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, color: T.textMuted, margin: "28px 0 16px" }}>Scrolling</h3>
-        <Slider label="Auto-Scroll Speed" value={settings.scrollSpeed} min={5} max={100} step={5} unit="px/s" onChange={v => setSettings(s => ({ ...s, scrollSpeed: v }))} />
-        <h3 style={{ fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, color: T.textMuted, margin: "28px 0 8px" }}>Display</h3>
-        <Toggle label={dark ? "Dark Mode" : "Light Mode"} value={dark} onChange={v => setSettings(s => ({ ...s, darkMode: v }))} desc="Toggle theme" />
-        <Toggle label="Mirror Text" value={settings.mirrorText} onChange={v => setSettings(s => ({ ...s, mirrorText: v }))} desc="Flip for teleprompter glass" />
-        <div style={{ marginTop: 32, padding: 16, background: T.surfaceAlt, borderRadius: 14 }}>
-          <h4 style={{ margin: "0 0 8px", fontSize: 14, fontWeight: 600 }}>Pocket Notes v1.0</h4>
-          <p style={{ margin: 0, fontSize: 12, color: T.textSecondary, lineHeight: 1.5 }}>Add to home screen for best experience: Share → Add to Home Screen.</p>
-        </div>
+      <div style={{position:"relative",marginBottom:14}}>
+        <input style={{...ip,paddingLeft:36,fontSize:14}} placeholder="Search sections..." value={sq} onChange={e=>setSq(e.target.value)}/>
+        <div style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",pointerEvents:"none"}}><I n="srch" s={14} c={T.tm}/></div>
+        {sq&&<button style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%)",...bt("i"),padding:6,minWidth:32,minHeight:32}} onClick={()=>setSq("")}><I n="x" s={14} c={T.tm}/></button>}
       </div>
+      <div style={{display:"flex",flexDirection:"column",gap:8}}>
+        {secs.filter(s=>!sq||s.label.toLowerCase().includes(sq.toLowerCase())||s.content.toLowerCase().includes(sq.toLowerCase())).map((sec,i)=><div key={sec.id} style={{background:T.sf,borderRadius:14,border:"1px solid "+(sec.highlighted?T.ac:T.bd),overflow:"hidden"}}>
+          <div style={{display:"flex",alignItems:"center",padding:"10px 10px",gap:6}}>
+            <div style={{display:"flex",flexDirection:"column",gap:2}}>
+              <button style={{...bt("i"),padding:3,minWidth:26,minHeight:26}} onClick={()=>movSec(i,-1)}><span style={{fontSize:10,color:T.tm}}>▲</span></button>
+              <button style={{...bt("i"),padding:3,minWidth:26,minHeight:26}} onClick={()=>movSec(i,1)}><span style={{fontSize:10,color:T.tm}}>▼</span></button>
+            </div>
+            <div style={{flex:1,cursor:"pointer"}} onClick={()=>setEditSec(editSec===sec.id?null:sec.id)}>
+              <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                <span style={{fontSize:10,fontWeight:600,textTransform:"uppercase",letterSpacing:0.5,color:T.ac,background:T.as,padding:"2px 8px",borderRadius:6}}>{sec.label}</span>
+                {sec.bookmarked&&<span style={{fontSize:10,color:T.ac}}>★</span>}
+                {sec.done&&<I n="chk" s={12} c={T.sc}/>}
+              </div>
+              <p style={{margin:"3px 0 0",fontSize:12,color:T.ts,lineHeight:1.3,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{sec.content}</p>
+            </div>
+            <div style={{display:"flex",gap:2,flexShrink:0}}>
+              <button style={{...bt("i"),padding:5,minWidth:34,minHeight:34}} onClick={()=>updSec(sec.id,{bookmarked:!sec.bookmarked})}><I n={sec.bookmarked?"bmf":"bm"} s={14} c={sec.bookmarked?T.ac:T.tm}/></button>
+              <button style={{...bt("i"),padding:5,minWidth:34,minHeight:34}} onClick={()=>updSec(sec.id,{highlighted:!sec.highlighted})}><I n="star" s={14} c={sec.highlighted?"#fbbf24":T.tm}/></button>
+              <button style={{...bt("i"),padding:5,minWidth:34,minHeight:34}} onClick={()=>delSec(sec.id)}><I n="trash" s={13} c={T.tm}/></button>
+            </div>
+          </div>
+          {editSec===sec.id&&<div style={{padding:"0 10px 12px"}}>
+            <input style={{...ip,fontSize:13,marginBottom:6}} value={sec.label} onChange={e=>updSec(sec.id,{label:e.target.value})} placeholder="Label (e.g. Intro, Main Point 1)"/>
+            <textarea style={{...ip,fontSize:14,minHeight:120,resize:"vertical",lineHeight:1.5}} value={sec.content} onChange={e=>updSec(sec.id,{content:e.target.value})} placeholder="Section content..."/>
+          </div>}
+        </div>)}
+      </div>
+      <button style={{...bt(),width:"100%",marginTop:12,border:"1.5px dashed "+T.bd,background:"transparent"}} onClick={addSec}><I n="plus" s={14} c={T.tm}/> Add Section</button>
+    </div>
+    <div style={{position:"absolute",bottom:0,left:0,right:0,padding:"12px 20px calc(12px + env(safe-area-inset-bottom, 0px))",background:T.sf,borderTop:"1px solid "+T.bd,display:"flex",gap:10,zIndex:50}}>
+      <button style={{...bt("p"),flex:1,padding:"14px 18px",fontSize:16}} onClick={()=>{setAS(s=>({...s,sec:0,chunk:0,view:"reader",mode:"scroll"}));setAutoScr(false);setFocus(false)}}>
+        <I n="play" s={18} c="#fff"/> Present
+      </button>
+    </div>
+    {toast&&<div style={{position:"fixed",bottom:80,left:"50%",transform:"translateX(-50%)",background:T.sf,color:T.tx,padding:"8px 18px",borderRadius:20,fontSize:13,boxShadow:T.sh,border:"1px solid "+T.bd,zIndex:200}}>{toast}</div>}
     </div>;
   }
 
-  // ── READER ──
-  if (view === "reader" && currentPres) {
-    const { readMode = "scroll", currentSection: curSec = 0, currentChunk: curChunk = 0 } = appState;
-    const cardHeight = settings.visibleLines * settings.fontSize * settings.lineSpacing + 32;
+  // ═══ SETTINGS ═══
+  if(view==="settings"){
+    const Sl=({l,v,mn,mx,st,u,fn})=><div style={{marginBottom:20}}>
+      <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><span style={{fontSize:14,fontWeight:500}}>{l}</span><span style={{fontSize:14,color:T.ac,fontWeight:600}}>{v}{u}</span></div>
+      <input type="range" min={mn} max={mx} step={st} value={v} onChange={e=>fn(parseFloat(e.target.value))} style={{width:"100%",accentColor:T.ac}}/>
+    </div>;
+    const Tg=({l,v,fn,d})=><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"14px 0",borderBottom:"1px solid "+T.bd,cursor:"pointer"}} onClick={()=>fn(!v)}>
+      <div><span style={{fontSize:14,fontWeight:500}}>{l}</span>{d&&<p style={{margin:"2px 0 0",fontSize:12,color:T.ts}}>{d}</p>}</div>
+      <div style={{width:46,height:28,borderRadius:14,background:v?T.ac:T.sa,padding:2,transition:"all 0.2s"}}><div style={{width:24,height:24,borderRadius:12,background:"#fff",transform:v?"translateX(18px)":"translateX(0)",transition:"all 0.2s",boxShadow:"0 1px 3px rgba(0,0,0,0.2)"}}/></div>
+    </div>;
+    return<div style={bs}><div style={{padding:"16px 20px 40px",height:"100%",overflow:"auto",WebkitOverflowScrolling:"touch"}}>
+      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:24,paddingTop:4}}>
+        <button style={bt("i")} onClick={()=>go("library")}><I n="back" s={20} c={T.ts}/></button>
+        <h2 style={{margin:0,fontSize:20,fontWeight:700}}>Settings</h2>
+      </div>
+      <h3 style={{fontSize:11,fontWeight:600,textTransform:"uppercase",letterSpacing:1,color:T.tm,margin:"0 0 14px"}}>Typography</h3>
+      <Sl l="Font Size" v={settings.fontSize} mn={12} mx={28} st={1} u="px" fn={v=>setS(s=>({...s,fontSize:v}))}/>
+      <Sl l="Line Spacing" v={settings.lineSpacing} mn={1.2} mx={2.2} st={0.05} u="×" fn={v=>setS(s=>({...s,lineSpacing:v}))}/>
+      <Sl l="Visible Lines" v={settings.visibleLines} mn={2} mx={6} st={1} u="" fn={v=>setS(s=>({...s,visibleLines:v}))}/>
+      <h3 style={{fontSize:11,fontWeight:600,textTransform:"uppercase",letterSpacing:1,color:T.tm,margin:"24px 0 14px"}}>Card</h3>
+      <Sl l="Card Width" v={settings.cardWidth} mn={60} mx={100} st={2} u="%" fn={v=>setS(s=>({...s,cardWidth:v}))}/>
+      <h3 style={{fontSize:11,fontWeight:600,textTransform:"uppercase",letterSpacing:1,color:T.tm,margin:"24px 0 14px"}}>Scrolling</h3>
+      <Sl l="Auto-Scroll Speed" v={settings.scrollSpeed} mn={5} mx={100} st={5} u="px/s" fn={v=>setS(s=>({...s,scrollSpeed:v}))}/>
+      <h3 style={{fontSize:11,fontWeight:600,textTransform:"uppercase",letterSpacing:1,color:T.tm,margin:"24px 0 6px"}}>Display</h3>
+      <Tg l={dk?"Dark Mode":"Light Mode"} v={dk} fn={v=>setS(s=>({...s,darkMode:v}))} d="Toggle theme"/>
+      <Tg l="Mirror Text" v={settings.mirrorText} fn={v=>setS(s=>({...s,mirrorText:v}))} d="Flip for teleprompter glass"/>
+      <button style={{...bt("d"),width:"100%",marginTop:28}} onClick={()=>{localStorage.clear();window.location.reload()}}>Reset All Data</button>
+      <div style={{marginTop:20,padding:14,background:T.sa,borderRadius:12}}>
+        <h4 style={{margin:"0 0 6px",fontSize:13,fontWeight:600}}>Pocket Notes v1.0</h4>
+        <p style={{margin:0,fontSize:11,color:T.ts,lineHeight:1.4}}>Add to home screen for best experience:<br/>Safari → Share → Add to Home Screen</p>
+      </div>
+    </div></div>;
+  }
 
-    const chunks = useMemo(() => {
-      const result = [];
-      sections.forEach((sec, si) => {
-        const sentences = sec.content.match(/[^.!?]+[.!?]+/g) || [sec.content];
-        for (let i = 0; i < sentences.length; i += 2) result.push({ text: sentences.slice(i, i + 2).join(" ").trim(), sectionIdx: si, label: sec.label });
-      });
-      return result;
-    }, [sections]);
+  // ═══ READER ═══
+  if(view==="reader"&&cp){
+    const rm=appState.mode||"scroll";
+    const cs=appState.sec||0;
+    const cc=appState.chunk||0;
+    const cH=settings.visibleLines*settings.fontSize*settings.lineSpacing+32;
+    const sRM=m=>setAS(s=>({...s,mode:m}));
+    const sCS=v=>setAS(s=>({...s,sec:typeof v==="function"?v(s.sec||0):v}));
+    const sCC=v=>setAS(s=>({...s,chunk:typeof v==="function"?v(s.chunk||0):v}));
+    const jmp=i=>{sCS(i);const ci=chunks.findIndex(c=>c.si===i);sCC(ci>=0?ci:0)};
+    const mDone=i=>{if(secs[i])updSec(secs[i].id,{done:true})};
 
-    const setReadMode = (mode) => setAppState(s => ({ ...s, readMode: mode }));
-    const setCurSec = (v) => setAppState(s => ({ ...s, currentSection: typeof v === "function" ? v(s.currentSection) : v }));
-    const setCurChunk = (v) => setAppState(s => ({ ...s, currentChunk: typeof v === "function" ? v(s.currentChunk) : v }));
-
-    const jumpToSection = (idx) => {
-      setCurSec(idx);
-      setCurChunk(chunks.findIndex(c => c.sectionIdx === idx) || 0);
-    };
-
-    const markDone = (idx) => {
-      updateSection(sections[idx]?.id, { done: true });
-      setSectionTimes(t => ({ ...t, [idx]: rehearsalTime - Object.values(t).reduce((a, b) => a + b, 0) }));
-    };
-
-    const ReaderHeader = () => <div style={{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 20, padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", background: `linear-gradient(${T.bg}, ${T.bg}ee, transparent)`, opacity: focusMode ? 0 : 1, pointerEvents: focusMode ? "none" : "auto", transition: "opacity 0.3s" }}>
-      <button style={btnStyle("icon")} onClick={() => { setAutoScroll(false); setRehearsalRunning(false); go("editor"); }}><Icon name="arrowLeft" size={18} color={T.textSecondary} /></button>
-      <div style={{ display: "flex", gap: 4, background: T.surfaceAlt, borderRadius: 10, padding: 3 }}>
-        {[["scroll", "Scroll"], ["cuecard", "Cards"], ["rehearsal", "Rehearse"]].map(([mode, label]) =>
-          <button key={mode} style={{ padding: "6px 12px", borderRadius: 8, border: "none", cursor: "pointer", background: readMode === mode ? T.accent : "transparent", color: readMode === mode ? "#fff" : T.textSecondary, fontSize: 12, fontWeight: 600, fontFamily: "inherit", transition: "all 0.15s" }} onClick={() => { setReadMode(mode); setAutoScroll(false); }}>{label}</button>
+    const Hdr=()=><div style={{position:"absolute",top:0,left:0,right:0,zIndex:20,padding:"10px 14px",display:"flex",justifyContent:"space-between",alignItems:"center",background:`linear-gradient(${T.bg}, ${T.bg}ee, transparent)`,paddingTop:"max(10px, env(safe-area-inset-top, 0px))",paddingBottom:6,opacity:focus?0:1,pointerEvents:focus?"none":"auto",transition:"opacity 0.3s"}}>
+      <button style={bt("i")} onClick={()=>{setAutoScr(false);setRRun(false);go("editor")}}><I n="back" s={18} c={T.ts}/></button>
+      <div style={{display:"flex",gap:3,background:T.sa,borderRadius:10,padding:3}}>
+        {[["scroll","Scroll"],["cuecard","Cards"],["rehearsal","Rehearse"]].map(([m,l])=>
+          <button key={m} style={{padding:"6px 11px",borderRadius:8,border:"none",cursor:"pointer",background:rm===m?T.ac:"transparent",color:rm===m?"#fff":T.ts,fontSize:11,fontWeight:600,fontFamily:"inherit",transition:"all 0.15s"}} onClick={()=>{sRM(m);setAutoScr(false)}}>{l}</button>
         )}
       </div>
-      <div style={{ display: "flex", gap: 4 }}>
-        <button style={btnStyle("icon")} onClick={() => setFocusMode(f => !f)}><Icon name={focusMode ? "minimize" : "maximize"} size={16} color={T.textSecondary} /></button>
-        <button style={btnStyle("icon")} onClick={() => setQuickHide(true)}><Icon name="eyeOff" size={16} color={T.textSecondary} /></button>
+      <div style={{display:"flex",gap:3}}>
+        <button style={bt("i")} onClick={()=>setFocus(f=>!f)}><I n={focus?"min":"max"} s={16} c={T.ts}/></button>
+        <button style={bt("i")} onClick={()=>setQHide(true)}><I n="eoff" s={16} c={T.ts}/></button>
       </div>
     </div>;
 
-    const SectionNav = () => <div style={{ position: "absolute", top: 56, left: 0, right: 0, zIndex: 15, padding: "4px 16px", display: "flex", gap: 6, overflowX: "auto", opacity: focusMode ? 0 : 1, pointerEvents: focusMode ? "none" : "auto", transition: "opacity 0.3s", WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
-      {sections.map((s, i) => <button key={s.id} style={{ padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer", whiteSpace: "nowrap", background: (readMode === "cuecard" ? chunks[curChunk]?.sectionIdx === i : curSec === i) ? T.accentSoft : T.surfaceAlt, color: (readMode === "cuecard" ? chunks[curChunk]?.sectionIdx === i : curSec === i) ? T.accent : T.textMuted, fontSize: 11, fontWeight: 600, fontFamily: "inherit", textTransform: "uppercase", letterSpacing: 0.3 }} onClick={() => jumpToSection(i)}>{s.bookmarked && "★ "}{s.label}</button>)}
+    const Nav=()=><div style={{position:"absolute",top:54,left:0,right:0,zIndex:15,padding:"3px 14px",display:"flex",gap:5,overflowX:"auto",opacity:focus?0:1,pointerEvents:focus?"none":"auto",transition:"opacity 0.3s",WebkitOverflowScrolling:"touch",scrollbarWidth:"none"}}>
+      {secs.map((s,i)=><button key={s.id} style={{padding:"5px 10px",borderRadius:7,border:"none",cursor:"pointer",whiteSpace:"nowrap",background:(rm==="cuecard"?chunks[cc]?.si===i:cs===i)?T.as:T.sa,color:(rm==="cuecard"?chunks[cc]?.si===i:cs===i)?T.ac:T.tm,fontSize:10,fontWeight:600,fontFamily:"inherit",textTransform:"uppercase",letterSpacing:0.3,flexShrink:0}} onClick={()=>jmp(i)}>{s.bookmarked?"★ ":""}{s.label}</button>)}
     </div>;
 
-    // SCROLL MODE
-    if (readMode === "scroll") {
-      return <div style={{ ...baseStyle, height: "100vh", overflow: "hidden" }}>
-        <ReaderHeader /><SectionNav />
-        <div style={{ position: "absolute", top: `calc(50% + ${cardPos.y}px)`, left: `calc(50% + ${cardPos.x}px)`, transform: settings.mirrorText ? "translate(-50%, -50%) scaleX(-1)" : "translate(-50%, -50%)", width: `${settings.cardWidth}%`, maxWidth: 420, zIndex: 10 }}>
-          <div style={{ display: "flex", justifyContent: "center", padding: "8px 0 4px", cursor: "grab", touchAction: "none" }} onTouchStart={onDragStart} onMouseDown={onDragStart}>
-            <div style={{ width: 36, height: 4, borderRadius: 2, background: T.textMuted, opacity: 0.4 }} />
+    if(rm==="scroll"){
+      return<div style={bs}>
+        <Hdr/><Nav/>
+        <div style={{position:"absolute",top:`calc(50% + ${cardPos.y}px)`,left:`calc(50% + ${cardPos.x}px)`,transform:settings.mirrorText?"translate(-50%,-50%) scaleX(-1)":"translate(-50%,-50%)",width:settings.cardWidth+"%",maxWidth:400,zIndex:10}}>
+          <div style={{display:"flex",justifyContent:"center",padding:"6px 0 3px",cursor:"grab",touchAction:"none"}} onTouchStart={onDS} onMouseDown={onDS}>
+            <div style={{width:36,height:4,borderRadius:2,background:T.tm,opacity:0.4}}/>
           </div>
-          <div style={{ background: T.card, borderRadius: 16, border: `1px solid ${T.cardBorder}`, boxShadow: T.shadowLg, height: cardHeight, overflow: "hidden", position: "relative" }}>
-            <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 28, background: `linear-gradient(${T.card}, transparent)`, zIndex: 2, pointerEvents: "none", borderRadius: "16px 16px 0 0" }} />
-            <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 28, background: `linear-gradient(transparent, ${T.card})`, zIndex: 2, pointerEvents: "none", borderRadius: "0 0 16px 16px" }} />
-            <div ref={scrollRef} style={{ height: "100%", overflow: "auto", padding: "20px 18px", fontSize: settings.fontSize, lineHeight: settings.lineSpacing, color: T.text, WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
-              {sections.map(sec => <div key={sec.id} style={{ marginBottom: 24 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, color: T.accent, marginBottom: 6, opacity: 0.7 }}>{sec.label}</div>
-                <div style={{ fontWeight: sec.highlighted ? 600 : 400, color: sec.highlighted ? T.accent : T.text }}>{sec.content}</div>
+          <div style={{background:T.cd,borderRadius:16,border:"1px solid "+T.cb,boxShadow:T.sh,height:cH,overflow:"hidden",position:"relative"}}>
+            <div style={{position:"absolute",top:0,left:0,right:0,height:28,background:`linear-gradient(${T.cd}, transparent)`,zIndex:2,pointerEvents:"none",borderRadius:"16px 16px 0 0"}}/>
+            <div style={{position:"absolute",bottom:0,left:0,right:0,height:28,background:`linear-gradient(transparent, ${T.cd})`,zIndex:2,pointerEvents:"none",borderRadius:"0 0 16px 16px"}}/>
+            <div ref={scrollRef} style={{height:"100%",overflow:"auto",padding:"20px 18px",fontSize:settings.fontSize,lineHeight:settings.lineSpacing,color:T.tx,WebkitOverflowScrolling:"touch",scrollbarWidth:"none"}}>
+              {secs.map(sec=><div key={sec.id} style={{marginBottom:22}}>
+                <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:T.ac,marginBottom:6,opacity:0.7}}>{sec.label}</div>
+                <div style={{fontWeight:sec.highlighted?600:400,color:sec.highlighted?T.ac:T.tx}}>{sec.content}</div>
               </div>)}
-              <div style={{ height: cardHeight }} />
+              <div style={{height:cH}}/>
             </div>
           </div>
         </div>
-        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 20, padding: "16px 20px 28px", background: `linear-gradient(transparent, ${T.bg}dd, ${T.bg})`, display: "flex", justifyContent: "center", gap: 12, alignItems: "center", opacity: focusMode ? 0.15 : 1, transition: "opacity 0.3s" }}>
-          <button style={{ ...btnStyle("icon"), minWidth: 48, minHeight: 48 }} onClick={() => setSettings(s => ({ ...s, scrollSpeed: Math.max(5, s.scrollSpeed - 10) }))}><Icon name="slow" size={14} color={T.textSecondary} /></button>
-          <button style={{ ...btnStyle("primary"), minWidth: 56, minHeight: 56, borderRadius: 28, padding: 0 }} onClick={() => setAutoScroll(a => !a)}><Icon name={autoScroll ? "pause" : "play"} size={20} color="#fff" /></button>
-          <button style={{ ...btnStyle("icon"), minWidth: 48, minHeight: 48 }} onClick={() => setSettings(s => ({ ...s, scrollSpeed: Math.min(100, s.scrollSpeed + 10) }))}><Icon name="fast" size={14} color={T.textSecondary} /></button>
-          <div style={{ position: "absolute", bottom: 8, fontSize: 11, color: T.textMuted }}>{settings.scrollSpeed}px/s</div>
+        <div style={{position:"absolute",bottom:0,left:0,right:0,zIndex:20,padding:"14px 20px calc(24px + env(safe-area-inset-bottom, 0px))",background:`linear-gradient(transparent, ${T.bg}dd, ${T.bg})`,display:"flex",justifyContent:"center",gap:12,alignItems:"center",opacity:focus?0.15:1,transition:"opacity 0.3s"}}>
+          <button style={{...bt("i"),minWidth:48,minHeight:48}} onClick={()=>setS(s=>({...s,scrollSpeed:Math.max(5,s.scrollSpeed-10)}))}><I n="rw" s={14} c={T.ts}/></button>
+          <button style={{...bt("p"),minWidth:56,minHeight:56,borderRadius:28,padding:0}} onClick={()=>setAutoScr(a=>!a)}><I n={autoScr?"pause":"play"} s={20} c="#fff"/></button>
+          <button style={{...bt("i"),minWidth:48,minHeight:48}} onClick={()=>setS(s=>({...s,scrollSpeed:Math.min(100,s.scrollSpeed+10)}))}><I n="ff" s={14} c={T.ts}/></button>
+          <div style={{position:"absolute",bottom:8,fontSize:10,color:T.tm}}>{settings.scrollSpeed}px/s</div>
         </div>
-        {focusMode && <div style={{ position: "absolute", top: 0, right: 0, width: 60, height: 60, zIndex: 30 }} onClick={() => setFocusMode(false)} />}
+        {focus&&<div style={{position:"absolute",top:0,right:0,width:60,height:60,zIndex:30}} onClick={()=>setFocus(false)}/>}
       </div>;
     }
 
-    // CUE CARD MODE
-    if (readMode === "cuecard") {
-      const chunk = chunks[curChunk];
-      const nextChunk = () => setCurChunk(c => Math.min(c + 1, chunks.length - 1));
-      const prevChunk = () => setCurChunk(c => Math.max(c - 1, 0));
-
-      return <div style={{ ...baseStyle, height: "100vh", overflow: "hidden" }}>
-        <ReaderHeader /><SectionNav />
-        <div style={{ position: "absolute", top: "50%", left: "50%", transform: settings.mirrorText ? `translate(calc(-50% + ${swipeOffset}px), -50%) scaleX(-1)` : `translate(calc(-50% + ${swipeOffset}px), -50%)`, width: `${settings.cardWidth}%`, maxWidth: 420, zIndex: 10, transition: swipeOffset === 0 ? "transform 0.25s ease" : "none" }}
-          onTouchStart={e => { touchStartX.current = e.touches[0].clientX; }}
-          onTouchMove={e => { touchDelta.current = e.touches[0].clientX - touchStartX.current; setSwipeOffset(touchDelta.current * 0.4); }}
-          onTouchEnd={() => { if (touchDelta.current < -50) nextChunk(); else if (touchDelta.current > 50) prevChunk(); touchDelta.current = 0; setSwipeOffset(0); }}>
-          <div style={{ background: T.card, borderRadius: 16, border: `1px solid ${T.cardBorder}`, boxShadow: T.shadowLg, padding: "28px 22px", minHeight: cardHeight, display: "flex", flexDirection: "column", justifyContent: "center" }}>
-            {chunk && <>
-              <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, color: T.accent, marginBottom: 12, opacity: 0.7 }}>{chunk.label}</div>
-              <div style={{ fontSize: settings.fontSize, lineHeight: settings.lineSpacing, fontWeight: 400, color: T.text }}>{chunk.text}</div>
-            </>}
+    if(rm==="cuecard"){
+      const ck=chunks[cc];
+      const nx=()=>sCC(c=>Math.min(c+1,chunks.length-1));
+      const pv=()=>sCC(c=>Math.max(c-1,0));
+      return<div style={bs}>
+        <Hdr/><Nav/>
+        <div style={{position:"absolute",top:"50%",left:"50%",transform:settings.mirrorText?`translate(calc(-50% + ${swOff}px),-50%) scaleX(-1)`:`translate(calc(-50% + ${swOff}px),-50%)`,width:settings.cardWidth+"%",maxWidth:400,zIndex:10,transition:swOff===0?"transform 0.25s ease":"none"}}
+          onTouchStart={e=>{txRef.current=e.touches[0].clientX}}
+          onTouchMove={e=>{tdRef.current=e.touches[0].clientX-txRef.current;setSwOff(tdRef.current*0.4)}}
+          onTouchEnd={()=>{if(tdRef.current<-50)nx();else if(tdRef.current>50)pv();tdRef.current=0;setSwOff(0)}}>
+          <div style={{background:T.cd,borderRadius:16,border:"1px solid "+T.cb,boxShadow:T.sh,padding:"28px 22px",minHeight:cH,display:"flex",flexDirection:"column",justifyContent:"center"}}>
+            {ck?<><div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:T.ac,marginBottom:12,opacity:0.7}}>{ck.label}</div>
+              <div style={{fontSize:settings.fontSize,lineHeight:settings.lineSpacing,color:T.tx}}>{ck.text}</div></>
+            :<div style={{color:T.tm,textAlign:"center"}}>No content</div>}
           </div>
-          <div style={{ textAlign: "center", marginTop: 10, fontSize: 12, color: T.textMuted }}>{curChunk + 1} / {chunks.length}</div>
+          <div style={{textAlign:"center",marginTop:10,fontSize:11,color:T.tm}}>{cc+1} / {chunks.length||1}</div>
         </div>
-        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 20, padding: "16px 20px 28px", background: `linear-gradient(transparent, ${T.bg}dd, ${T.bg})`, display: "flex", justifyContent: "center", gap: 16, alignItems: "center", opacity: focusMode ? 0.15 : 1, transition: "opacity 0.3s" }}>
-          <button style={{ ...btnStyle("icon"), minWidth: 56, minHeight: 56 }} onClick={prevChunk}><Icon name="chevLeft" size={24} color={T.text} /></button>
-          <button style={{ ...btnStyle("icon"), minWidth: 56, minHeight: 56 }} onClick={nextChunk}><Icon name="chevRight" size={24} color={T.text} /></button>
+        <div style={{position:"absolute",bottom:0,left:0,right:0,zIndex:20,padding:"14px 20px calc(24px + env(safe-area-inset-bottom, 0px))",background:`linear-gradient(transparent, ${T.bg}dd, ${T.bg})`,display:"flex",justifyContent:"center",gap:16,alignItems:"center",opacity:focus?0.15:1,transition:"opacity 0.3s"}}>
+          <button style={{...bt("i"),minWidth:56,minHeight:56}} onClick={pv}><I n="cl" s={24} c={T.tx}/></button>
+          <button style={{...bt("i"),minWidth:56,minHeight:56}} onClick={nx}><I n="cr" s={24} c={T.tx}/></button>
         </div>
-        {focusMode && <div style={{ position: "absolute", top: 0, right: 0, width: 60, height: 60, zIndex: 30 }} onClick={() => setFocusMode(false)} />}
+        {focus&&<div style={{position:"absolute",top:0,right:0,width:60,height:60,zIndex:30}} onClick={()=>setFocus(false)}/>}
       </div>;
     }
 
-    // REHEARSAL MODE
-    if (readMode === "rehearsal") {
-      const sec = sections[curSec];
-      const progress = sections.length > 0 ? ((curSec + (sec?.done ? 1 : 0)) / sections.length) * 100 : 0;
-
-      return <div style={{ ...baseStyle, height: "100vh", overflow: "hidden" }}>
-        <ReaderHeader /><SectionNav />
-        <div style={{ position: "absolute", top: 88, left: 20, right: 20, zIndex: 15, display: "flex", alignItems: "center", gap: 12, opacity: focusMode ? 0 : 1, transition: "opacity 0.3s" }}>
-          <button style={{ ...btnStyle("icon"), minWidth: 40, minHeight: 40 }} onClick={() => setRehearsalRunning(r => !r)}><Icon name={rehearsalRunning ? "pause" : "play"} size={14} color={T.accent} /></button>
-          <div style={{ flex: 1 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-              <span style={{ fontSize: 20, fontWeight: 700, fontVariantNumeric: "tabular-nums", color: T.text }}>{fmtTime(rehearsalTime)}</span>
-              <span style={{ fontSize: 12, color: T.textMuted }}>{Math.round(progress)}%</span>
+    if(rm==="rehearsal"){
+      const sec=secs[cs];
+      const prog=secs.length>0?((cs+(sec?.done?1:0))/secs.length)*100:0;
+      return<div style={bs}>
+        <Hdr/><Nav/>
+        <div style={{position:"absolute",top:82,left:18,right:18,zIndex:15,display:"flex",alignItems:"center",gap:10,opacity:focus?0:1,transition:"opacity 0.3s"}}>
+          <button style={{...bt("i"),minWidth:40,minHeight:40}} onClick={()=>setRRun(r=>!r)}><I n={rRun?"pause":"play"} s={14} c={T.ac}/></button>
+          <div style={{flex:1}}>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+              <span style={{fontSize:20,fontWeight:700,fontVariantNumeric:"tabular-nums",color:T.tx}}>{fmt(rTime)}</span>
+              <span style={{fontSize:11,color:T.tm}}>{Math.round(prog)}%</span>
             </div>
-            <div style={{ height: 4, borderRadius: 2, background: T.surfaceAlt, overflow: "hidden" }}><div style={{ height: "100%", width: `${progress}%`, background: T.accent, borderRadius: 2, transition: "width 0.3s" }} /></div>
+            <div style={{height:4,borderRadius:2,background:T.sa,overflow:"hidden"}}><div style={{height:"100%",width:prog+"%",background:T.ac,borderRadius:2,transition:"width 0.3s"}}/></div>
           </div>
         </div>
-        <div style={{ position: "absolute", top: "50%", left: "50%", transform: settings.mirrorText ? "translate(-50%, -50%) scaleX(-1)" : "translate(-50%, -50%)", width: `${settings.cardWidth}%`, maxWidth: 420, zIndex: 10 }}>
-          <div style={{ background: T.card, borderRadius: 16, border: `1px solid ${T.cardBorder}`, boxShadow: T.shadowLg, overflow: "hidden", position: "relative", height: cardHeight + 20 }}>
-            <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 24, background: `linear-gradient(${T.card}, transparent)`, zIndex: 2, pointerEvents: "none", borderRadius: "16px 16px 0 0" }} />
-            <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 24, background: `linear-gradient(transparent, ${T.card})`, zIndex: 2, pointerEvents: "none", borderRadius: "0 0 16px 16px" }} />
-            <div style={{ height: "100%", overflow: "auto", padding: "20px 18px", fontSize: settings.fontSize, lineHeight: settings.lineSpacing, WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
-              {sec && <>
-                <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, color: sec.done ? T.success : T.accent, marginBottom: 8 }}>{sec.done ? "✓ " : ""}{sec.label}</div>
-                <div style={{ color: T.text, opacity: sec.done ? 0.5 : 1 }}>{sec.content}</div>
-              </>}
-              <div style={{ height: cardHeight / 2 }} />
+        <div style={{position:"absolute",top:"52%",left:"50%",transform:settings.mirrorText?"translate(-50%,-50%) scaleX(-1)":"translate(-50%,-50%)",width:settings.cardWidth+"%",maxWidth:400,zIndex:10}}>
+          <div style={{background:T.cd,borderRadius:16,border:"1px solid "+T.cb,boxShadow:T.sh,overflow:"hidden",position:"relative",height:cH+20}}>
+            <div style={{position:"absolute",top:0,left:0,right:0,height:24,background:`linear-gradient(${T.cd}, transparent)`,zIndex:2,pointerEvents:"none",borderRadius:"16px 16px 0 0"}}/>
+            <div style={{position:"absolute",bottom:0,left:0,right:0,height:24,background:`linear-gradient(transparent, ${T.cd})`,zIndex:2,pointerEvents:"none",borderRadius:"0 0 16px 16px"}}/>
+            <div style={{height:"100%",overflow:"auto",padding:"20px 18px",fontSize:settings.fontSize,lineHeight:settings.lineSpacing,WebkitOverflowScrolling:"touch",scrollbarWidth:"none"}}>
+              {sec?<><div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:sec.done?T.sc:T.ac,marginBottom:8}}>{sec.done?"✓ ":""}{sec.label}</div>
+                <div style={{color:T.tx,opacity:sec.done?0.5:1}}>{sec.content}</div></>
+              :<div style={{color:T.tm}}>No section</div>}
+              <div style={{height:cH/2}}/>
             </div>
           </div>
-          <div style={{ textAlign: "center", marginTop: 8, fontSize: 12, color: T.textMuted }}>Section {curSec + 1} of {sections.length}</div>
+          <div style={{textAlign:"center",marginTop:8,fontSize:11,color:T.tm}}>Section {cs+1} of {secs.length}</div>
         </div>
-        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 20, padding: "16px 20px 28px", background: `linear-gradient(transparent, ${T.bg}dd, ${T.bg})`, display: "flex", justifyContent: "center", gap: 12, alignItems: "center", opacity: focusMode ? 0.15 : 1, transition: "opacity 0.3s" }}>
-          <button style={{ ...btnStyle("icon"), minWidth: 48, minHeight: 48 }} onClick={() => setCurSec(s => Math.max(0, s - 1))}><Icon name="chevLeft" size={22} color={T.text} /></button>
-          <button style={{ ...btnStyle(), minHeight: 48, background: T.successSoft, color: T.success, fontWeight: 600 }} onClick={() => { markDone(curSec); if (curSec < sections.length - 1) setCurSec(s => s + 1); }}><Icon name="check" size={16} color={T.success} /> Done</button>
-          <button style={{ ...btnStyle("icon"), minWidth: 48, minHeight: 48 }} onClick={() => setCurSec(s => Math.min(sections.length - 1, s + 1))}><Icon name="chevRight" size={22} color={T.text} /></button>
-          <button style={{ ...btnStyle("icon"), position: "absolute", right: 16, minWidth: 40, minHeight: 40 }} onClick={() => { setRehearsalTime(0); setRehearsalRunning(false); setSectionTimes({}); setCurSec(0); sections.forEach(s => updateSection(s.id, { done: false })); }}><span style={{ fontSize: 14, color: T.textMuted }}>↺</span></button>
+        <div style={{position:"absolute",bottom:0,left:0,right:0,zIndex:20,padding:"14px 20px calc(24px + env(safe-area-inset-bottom, 0px))",background:`linear-gradient(transparent, ${T.bg}dd, ${T.bg})`,display:"flex",justifyContent:"center",gap:12,alignItems:"center",opacity:focus?0.15:1,transition:"opacity 0.3s"}}>
+          <button style={{...bt("i"),minWidth:48,minHeight:48}} onClick={()=>sCS(s=>Math.max(0,s-1))}><I n="cl" s={22} c={T.tx}/></button>
+          <button style={{...bt(),minHeight:48,background:T.ss,color:T.sc,fontWeight:600}} onClick={()=>{mDone(cs);if(cs<secs.length-1)sCS(s=>s+1)}}><I n="chk" s={16} c={T.sc}/> Done</button>
+          <button style={{...bt("i"),minWidth:48,minHeight:48}} onClick={()=>sCS(s=>Math.min(secs.length-1,s+1))}><I n="cr" s={22} c={T.tx}/></button>
+          <button style={{...bt("i"),position:"absolute",right:14,minWidth:38,minHeight:38}} onClick={()=>{setRTime(0);setRRun(false);sCS(0);secs.forEach(s=>updSec(s.id,{done:false}))}}><span style={{fontSize:14,color:T.tm}}>↺</span></button>
         </div>
-        {focusMode && <div style={{ position: "absolute", top: 0, right: 0, width: 60, height: 60, zIndex: 30 }} onClick={() => setFocusMode(false)} />}
+        {focus&&<div style={{position:"absolute",top:0,right:0,width:60,height:60,zIndex:30}} onClick={()=>setFocus(false)}/>}
       </div>;
     }
   }
 
-  return <div style={baseStyle}><div style={{ padding: 40, textAlign: "center" }}><p style={{ color: T.textSecondary }}>Something went wrong.</p><button style={btnStyle("primary")} onClick={() => go("library")}>Go Home</button></div></div>;
+  return<div style={bs}><div style={{padding:40,textAlign:"center"}}><p style={{color:T.ts||"#888",marginBottom:16}}>Something went wrong.</p><button style={bt("p")} onClick={()=>{setAS({pid:null,view:"library",mode:"scroll",sec:0,chunk:0})}}>Go Home</button></div></div>;
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(<PocketNotes />);
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script>
 </body>
 </html>
